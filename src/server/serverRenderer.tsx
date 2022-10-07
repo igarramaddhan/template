@@ -2,6 +2,13 @@ import {Request, Response} from 'express';
 import {StrictMode} from 'react';
 import {renderToString} from 'react-dom/server';
 import {StaticRouter} from 'react-router-dom/server';
+import {
+  dehydrate,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
+import ssrPrepass from 'react-ssr-prepass';
+
 import App from '../app/App';
 
 enum ErrorCode {
@@ -17,13 +24,27 @@ const serverRenderer =
     console.log('fullUrl: ', fullUrl);
     console.log('req.url: ', req.url);
 
+    const queryClient = new QueryClient();
+
     const app = (
       <StrictMode>
-        <StaticRouter location={req.url}>
-          <App />
-        </StaticRouter>
+        <QueryClientProvider client={queryClient}>
+          <StaticRouter location={req.url}>
+            <App />
+          </StaticRouter>
+        </QueryClientProvider>
       </StrictMode>
     );
+
+    // React SSR does not support ErrorBoundary
+    try {
+      // Traverse the tree and fetch all Suspense data (thrown promises)
+      await ssrPrepass(app);
+    } catch (e) {
+      console.error(e);
+      // Send the index.html (without SSR) on error, so user can try to recover and see something
+      return res.sendFile('something went wrong');
+    }
 
     const statusCode = 200;
     let content = '';
@@ -50,6 +71,8 @@ const serverRenderer =
           }" defer></script>`
         : '';
 
+    const dehydratedState = dehydrate(queryClient);
+
     const html = `
       <!doctype html>
       <html lang="en">
@@ -61,6 +84,9 @@ const serverRenderer =
           <div id="root">${content}</div>
           ${mainScript} 
         </body>
+        <script>
+          window.__REACT_QUERY_STATE__ = ${JSON.stringify(dehydratedState)};
+        </script>
       </html>
       `;
 

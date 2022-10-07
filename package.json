@@ -10,12 +10,15 @@
     "start": "NODE_ENV=production node src/server"
   },
   "dependencies": {
+    "@tanstack/react-query": "^4.10.1",
     "compression": "^1.7.4",
     "core-js": "^3.25.2",
     "express": "^4.18.1",
+    "isomorphic-fetch": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.4.1",
+    "react-ssr-prepass": "^1.5.0",
     "webpack": "^5.74.0"
   },
   "devDependencies": {
